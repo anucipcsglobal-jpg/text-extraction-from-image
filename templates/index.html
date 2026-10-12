@@ -1,0 +1,591 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Image Data Extractor</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px 16px;
+            font-family: Arial, sans-serif;
+            background: #f3f5f9;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 20px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px #0000000d;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #3346a8;
+        }
+
+        .subtitle {
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .upload-box {
+            margin-top: 25px;
+            padding: 35px 20px;
+            border: 2px dashed #a5b4fc;
+            border-radius: 14px;
+            background: #f8faff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .upload-box.drag-over {
+            border-color: #4657d5;
+            background: #eeefff;
+        }
+
+        .upload-icon {
+            width: 65px;
+            height: 65px;
+            display: grid;
+            place-items: center;
+            background: #e0e7ff;
+            border-radius: 18px;
+            font-size: 30px;
+        }
+
+        .upload-box h3 {
+            margin: 4px 0 0;
+        }
+
+        .hint {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .choose-file-btn {
+            display: inline-block;
+            padding: 13px 24px;
+            background: #4657d5;
+            color: white;
+            border-radius: 9px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .choose-file-btn:hover {
+            background: #3544b5;
+        }
+
+        #fileName {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            color: #4657d5;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 9px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #extractBtn {
+            width: 100%;
+            max-width: 280px;
+            margin-top: 8px;
+            background: #4657d5;
+            color: white;
+        }
+
+        #copyBtn {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        #downloadCsvBtn {
+            background: #15803d;
+            color: white;
+        }
+
+        #downloadCsvBtn:hover:not(:disabled) {
+            background: #166534;
+        }
+
+        button:hover:not(:disabled) {
+            filter: brightness(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 28px;
+        }
+
+        .result-header h2 {
+            font-size: 21px;
+            margin-right: auto;
+        }
+
+        pre {
+            min-height: 120px;
+            padding: 20px;
+            overflow: auto;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
+            border-radius: 10px;
+            background: #111827;
+            color: #a7f3d0;
+            line-height: 1.6;
+        }
+
+        #status {
+            margin-top: 18px;
+            line-height: 1.6;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+
+        .success {
+            color: #15803d;
+        }
+
+        .preview {
+            display: none;
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            margin-top: 28px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .upload-box {
+                padding: 25px 12px;
+            }
+
+            .result-header {
+                justify-content: flex-start;
+            }
+
+            .result-header h2 {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<main class="container">
+
+    <h1>Smart Image Data Extractor</h1>
+
+    <p class="subtitle">
+        Upload an image of a WhatsApp chat list or another supported
+        document. Extract text using OCR and display the result as JSON.
+        Download chat data as a CSV file.
+    </p>
+
+    <form id="uploadForm">
+        <div class="upload-box" id="uploadBox">
+
+            <div class="upload-icon">🖼️</div>
+
+            <h3>Upload Your Image</h3>
+
+            <p class="hint">
+                Drag and drop an image here, or choose a file.
+            </p>
+
+            <label for="image" class="choose-file-btn">
+                📁 Choose Image
+            </label>
+
+            <input
+                type="file"
+                id="image"
+                name="image"
+                accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff"
+                required
+            >
+
+            <p id="fileName">No file selected</p>
+
+            <img
+                id="preview"
+                class="preview"
+                alt="Selected image preview"
+            >
+
+            <p class="hint">
+                PNG, JPG, JPEG, WEBP, BMP, TIFF · Maximum 10 MB
+            </p>
+
+            <button type="submit" id="extractBtn">
+                Extract Image Data
+            </button>
+
+        </div>
+    </form>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <div class="result-header">
+        <h2>Extracted JSON</h2>
+
+        <button type="button" id="copyBtn" disabled>
+            Copy JSON
+        </button>
+
+        <button type="button" id="downloadCsvBtn" disabled>
+            Download CSV
+        </button>
+    </div>
+
+    <pre id="result">Your extracted data will appear here.</pre>
+
+    <h2 class="section-title">Extracted Text (OCR)</h2>
+
+    <pre id="ocrResult">
+The text read from your image will appear here.
+    </pre>
+
+    <p class="hint">
+        Powered by Python, Flask, and RapidOCR.
+    </p>
+
+</main>
+
+<script>
+    const form = document.getElementById("uploadForm");
+    const fileInput = document.getElementById("image");
+    const uploadBox = document.getElementById("uploadBox");
+    const fileName = document.getElementById("fileName");
+    const preview = document.getElementById("preview");
+    const extractBtn = document.getElementById("extractBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+    const status = document.getElementById("status");
+    const resultBox = document.getElementById("result");
+    const ocrResult = document.getElementById("ocrResult");
+
+    let extractedJSON = null;
+    let previewURL = null;
+
+    // Select an image.
+    fileInput.addEventListener("change", () => {
+        const file = fileInput.files[0];
+        showSelectedFile(file);
+        resetResults();
+    });
+
+    function showSelectedFile(file) {
+        if (!file) {
+            fileName.textContent = "No file selected";
+            preview.style.display = "none";
+            preview.removeAttribute("src");
+            return;
+        }
+
+        fileName.textContent = "📄 " + file.name;
+
+        if (previewURL) {
+            URL.revokeObjectURL(previewURL);
+            previewURL = null;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            preview.style.display = "none";
+            showError("Please select a valid image file.");
+            return;
+        }
+
+        previewURL = URL.createObjectURL(file);
+        preview.src = previewURL;
+        preview.style.display = "block";
+    }
+
+    // Reset previous extraction when a new image is selected.
+    function resetResults() {
+        extractedJSON = null;
+
+        copyBtn.disabled = true;
+        downloadCsvBtn.disabled = true;
+
+        resultBox.textContent =
+            "Your extracted data will appear here.";
+
+        ocrResult.textContent =
+            "The text read from your image will appear here.";
+
+        status.textContent = "";
+        status.className = "";
+    }
+
+    // Drag and drop.
+    uploadBox.addEventListener("dragover", event => {
+        event.preventDefault();
+        uploadBox.classList.add("drag-over");
+    });
+
+    uploadBox.addEventListener("dragleave", event => {
+        if (!uploadBox.contains(event.relatedTarget)) {
+            uploadBox.classList.remove("drag-over");
+        }
+    });
+
+    uploadBox.addEventListener("drop", event => {
+        event.preventDefault();
+        uploadBox.classList.remove("drag-over");
+
+        const file = event.dataTransfer.files[0];
+
+        if (file) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+
+            fileInput.files = transfer.files;
+
+            showSelectedFile(file);
+            resetResults();
+        }
+    });
+
+    // Extract image data.
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showError("Please select an image.");
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            showError("The maximum file size is 10 MB.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        extractBtn.disabled = true;
+        copyBtn.disabled = true;
+        downloadCsvBtn.disabled = true;
+
+        extractBtn.textContent = "Analyzing Image...";
+
+        status.className = "";
+        status.textContent =
+            "Reading the image and extracting information. Please wait.";
+
+        resultBox.textContent = "Processing...";
+        ocrResult.textContent = "Extracting text...";
+
+        extractedJSON = null;
+
+        try {
+            const response = await fetch("/extract-image", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error || "Image extraction failed."
+                );
+            }
+
+            extractedJSON = data.result;
+
+            resultBox.textContent = JSON.stringify(
+                extractedJSON,
+                null,
+                2
+            );
+
+            ocrResult.textContent =
+                data.extracted_text || "No text found.";
+
+            copyBtn.disabled = false;
+
+            // Enable CSV only when chat records exist.
+            downloadCsvBtn.disabled = !(
+                extractedJSON &&
+                Array.isArray(extractedJSON.chats) &&
+                extractedJSON.chats.length > 0
+            );
+
+            status.className = "success";
+            status.textContent =
+                "Image extraction completed successfully.";
+
+        } catch (error) {
+            extractedJSON = null;
+
+            resultBox.textContent = "No result available.";
+            ocrResult.textContent = "Text extraction failed.";
+
+            copyBtn.disabled = true;
+            downloadCsvBtn.disabled = true;
+
+            showError(error.message);
+
+            console.error(
+                "Image extraction error:",
+                error
+            );
+
+        } finally {
+            extractBtn.disabled = false;
+            extractBtn.textContent = "Extract Image Data";
+        }
+    });
+
+    // Copy extracted JSON.
+    copyBtn.addEventListener("click", async () => {
+        if (!extractedJSON) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(
+                JSON.stringify(extractedJSON, null, 2)
+            );
+
+            status.className = "success";
+            status.textContent = "JSON copied to clipboard.";
+
+        } catch (error) {
+            console.error("Copy error:", error);
+
+            showError(
+                "Unable to copy JSON. Please copy it manually."
+            );
+        }
+    });
+
+    // Download CSV from the Flask backend.
+    downloadCsvBtn.addEventListener("click", async () => {
+        if (
+            !extractedJSON ||
+            !Array.isArray(extractedJSON.chats) ||
+            extractedJSON.chats.length === 0
+        ) {
+            showError(
+                "Please extract chat data before downloading CSV."
+            );
+            return;
+        }
+
+        downloadCsvBtn.disabled = true;
+        downloadCsvBtn.textContent = "Preparing CSV...";
+
+        try {
+            const response = await fetch("/download-csv", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    chats: extractedJSON.chats
+                })
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(
+                    () => ({})
+                );
+
+                throw new Error(
+                    data.error || "CSV download failed."
+                );
+            }
+
+            const blob = await response.blob();
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = "whatsapp_chats.csv";
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            // Release the temporary URL after the download starts.
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            status.className = "success";
+            status.textContent =
+                "CSV downloaded successfully.";
+
+        } catch (error) {
+            console.error("CSV download error:", error);
+            showError(error.message || "Unable to download CSV.");
+
+        } finally {
+            downloadCsvBtn.disabled = !(
+                extractedJSON &&
+                Array.isArray(extractedJSON.chats) &&
+                extractedJSON.chats.length > 0
+            );
+
+            downloadCsvBtn.textContent = "Download CSV";
+        }
+    });
+
+    function showError(message) {
+        status.textContent = message;
+        status.className = "error";
+    }
+</script>
+
+</body>
+</html>
